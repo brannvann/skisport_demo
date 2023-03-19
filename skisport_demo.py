@@ -7,6 +7,7 @@ from selenium.webdriver.common.by import By
 import json
 import matplotlib.pyplot as plt
 
+# "демографический срез" пользователей сайта www.skisport.ru (https://www.skisport.ru/forum/other/92285/) 
 class skisportUserDemoParser():
     driver = None
     startPage = 'https://www.skisport.ru/forum/all-no-trade/'
@@ -20,20 +21,23 @@ class skisportUserDemoParser():
         service = Service(executable_path='/usr/local/bin/chromedriver')
         self.driver = webdriver.Chrome(options=chrome_options, service=service)
 
-
+    # проход по последним темам форума с фильтром "Все темы, кроме толкучки"
     def start(self):
         self.loadUsers()
-        self.processData()
         self.driver.get(self.startPage)
         self.driver.maximize_window()
-        topics = [t.get_attribute('href') for t in self.driver.find_elements(By.XPATH, '//*/td/a') if ('skisport.ru/forum' in t.get_attribute('href'))]
-        for topic in topics:
-            self.processTopic(topic)
-            self.saveUsers()
+        for index in range(2, 5):
+            topics = [t.get_attribute('href') for t in self.driver.find_elements(By.XPATH, '//*/td/a') if ('skisport.ru/forum' in t.get_attribute('href'))]
+            for topic in topics:
+                self.processTopic(topic)
+                self.saveUsers()
+            pass
+            next_page = f"https://www.skisport.ru/forum/all-no-trade/?PAGEN_1={index}"
+            self.driver.get(next_page)
         pass
         self.processData()
 
-
+    # проход по ссылкам на профили пользователей в теме форума
     def processTopic(self, link):
         self.driver.get(link)
         profile_xpath = "//*[@class='forum-comment-info']/div[1]/a"
@@ -47,7 +51,7 @@ class skisportUserDemoParser():
             pass
         pass
 
-
+    # если в профиле указана дата рождения, то сохранить её
     def processProfile(self, id, profile):
         bdata = ''
         self.driver.get(profile)
@@ -60,7 +64,7 @@ class skisportUserDemoParser():
         pass
         self.users[id] = bdata
 
-
+    # график количества пользователей по году рождения
     def processData(self):
         years = {}
         max_count = 0
@@ -83,7 +87,7 @@ class skisportUserDemoParser():
         fig, ax = plt.subplots()
         ax.bar(labels, users, color='Red', label = '', width=1.0, edgecolor='Black')
         ax.set_ylabel('Количество пользователей', fontsize=16)
-        ax.set_title('Демографический срез пользователей форума сайта www.skisport.ru', fontsize=16)
+        ax.set_title('Возраст пользователей форума сайта www.skisport.ru', fontsize=16)
         ax.legend(fontsize=16)
         xpos = range(len(labels))
         ypos = range(0, max_count)
@@ -96,7 +100,6 @@ class skisportUserDemoParser():
         with open(self.filename, 'w') as ofs:
             json.dump(self.users, ofs)
         pass
-
 
     def loadUsers(self):
         try:
